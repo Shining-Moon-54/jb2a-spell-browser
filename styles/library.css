@@ -1,1 +1,202 @@
-.jbs-root{display:grid;grid-template-columns:minmax(260px,1fr) minmax(290px,1fr);gap:12px;height:100%;min-height:460px;padding:12px}.jbs-left,.jbs-right{min-height:0;display:flex;flex-direction:column;gap:9px}.jbs-list{overflow:auto;flex:1;min-height:0;border:1px solid var(--color-border-light-tertiary);border-radius:7px}.jbs-row{display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid var(--color-border-light-tertiary);width:100%;text-align:left;background:transparent;cursor:pointer}.jbs-row:hover,.jbs-row.selected{background:rgba(160,120,70,.18)}.jbs-row img,.jbs-header img{width:40px;height:40px;object-fit:cover;border:0;border-radius:5px}.jbs-row small{display:block;opacity:.75}.jbs-header{display:flex;gap:12px;align-items:center}.jbs-right button{min-height:32px}.jbs-search{width:100%}.jbs-filters{display:flex;gap:6px}.jbs-filters select{flex:1}.jbs-status{font-size:12px;opacity:.8}.jbs-warn{border:1px solid #b78d2a;padding:8px;border-radius:6px}.jbs-effects{overflow:auto;max-height:150px}.jbs-effect{display:flex;justify-content:space-between;gap:8px;margin:5px 0}.jbs-push{margin-top:auto}@media(max-width:700px){.jbs-root{grid-template-columns:1fr;height:auto}.jbs-list{max-height:350px}}
+/* D&D-Zauberbibliothek – Foundry V14
+   Bewusst hochspezifische Selektoren: Foundrys Button-Regeln
+   duerfen die Hoehe der Zauberzeilen nicht ueberschreiben. */
+
+#jb2a-spell-browser-window .jbs-root {
+  display: grid;
+  grid-template-columns: minmax(310px, 1fr) minmax(280px, 1fr);
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+#jb2a-spell-browser-window .jbs-left,
+#jb2a-spell-browser-window .jbs-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: 9px;
+}
+
+#jb2a-spell-browser-window .jbs-left > h2 {
+  line-height: 1.2;
+  margin: 2px 0 12px;
+}
+
+#jb2a-spell-browser-window .jbs-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+}
+
+#jb2a-spell-browser-window .jbs-filters {
+  display: flex;
+  gap: 7px;
+}
+
+#jb2a-spell-browser-window .jbs-filters select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#jb2a-spell-browser-window .jbs-status {
+  font-size: 12px;
+  opacity: .8;
+}
+
+#jb2a-spell-browser-window .jbs-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-height: 140px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--color-border-light-tertiary, #61554f);
+  border-radius: 7px;
+}
+
+#jb2a-spell-browser-window button.jbs-row {
+  /* Override Foundry's global button height, padding and alignment */
+  display: flex !important;
+  flex: 0 0 auto !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 62px !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 7px 9px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #61554f) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: normal !important;
+  cursor: pointer;
+}
+
+#jb2a-spell-browser-window button.jbs-row[hidden] {
+  display: none !important;
+}
+
+#jb2a-spell-browser-window button.jbs-row:hover,
+#jb2a-spell-browser-window button.jbs-row.selected {
+  background: rgba(160, 120, 70, .20) !important;
+}
+
+#jb2a-spell-browser-window button.jbs-row:focus-visible {
+  outline: 2px solid #ca965b;
+  outline-offset: -3px;
+}
+
+#jb2a-spell-browser-window button.jbs-row img {
+  display: block !important;
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  margin: 0 !important;
+  object-fit: cover;
+  border: 0 !important;
+  border-radius: 5px;
+}
+
+#jb2a-spell-browser-window button.jbs-row > span {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1.25;
+  text-align: left;
+}
+
+#jb2a-spell-browser-window button.jbs-row strong,
+#jb2a-spell-browser-window button.jbs-row small {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+#jb2a-spell-browser-window button.jbs-row strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+#jb2a-spell-browser-window button.jbs-row small {
+  margin-top: 3px;
+  font-size: 11px;
+  opacity: .76;
+}
+
+#jb2a-spell-browser-window .jbs-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#jb2a-spell-browser-window .jbs-header img {
+  display: block;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  max-height: 48px;
+  object-fit: cover;
+  border: 0;
+  border-radius: 5px;
+}
+
+#jb2a-spell-browser-window .jbs-right h2,
+#jb2a-spell-browser-window .jbs-right h3 {
+  margin: 4px 0;
+  line-height: 1.25;
+}
+
+#jb2a-spell-browser-window .jbs-right button {
+  min-height: 32px;
+}
+
+#jb2a-spell-browser-window .jbs-warn {
+  border: 1px solid #b78d2a;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+#jb2a-spell-browser-window .jbs-effects {
+  overflow-y: auto;
+  max-height: 150px;
+}
+
+#jb2a-spell-browser-window .jbs-effect {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+}
+
+#jb2a-spell-browser-window .jbs-push {
+  margin-top: auto;
+}
+
+@media (max-width: 750px) {
+  #jb2a-spell-browser-window .jbs-root {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+  #jb2a-spell-browser-window .jbs-list {
+    flex: 0 1 auto;
+    max-height: 350px;
+  }
+}
