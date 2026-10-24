@@ -34,13 +34,13 @@ export async function writeVariants(spellKey, variants) {
 export function availableEffects() {
   const db = globalThis.Sequencer?.Database;
   const paths = db?.flattenedEntries || [];
-  return [...new Set(paths.filter(p => typeof p === "string" && p.startsWith("jb2a.")))].sort();
+  return [...new Set(Array.from(paths).filter(p => typeof p === "string" && p.startsWith("jb2a.")))].sort();
 }
 
 export function validEffect(path) {
   if (!path || typeof path !== "string" || !path.startsWith("jb2a.")) return false;
   const db = globalThis.Sequencer?.Database;
-  return !!(db?.entryExists(path) || availableEffects().some(p => p.startsWith(path + ".")));
+  return !!(db?.entryExists(path) || availableEffects().includes(path));
 }
 
 export function effectRow(path = "", role = "target") {
@@ -168,7 +168,7 @@ export async function runVariant(spell, variant, persistent) {
       });
     }
     if (item.delay) effect.delay(item.delay);
-    if (persistent) {
+    if (persistent && (item.role !== "travel" || cfg.mode === "wall")) {
       effect.persist().name(PREFIX + spell.slug + "__" + foundry.utils.randomID());
     }
     // Projektile beenden, bevor ein danach platzierter Einschlag erscheint.

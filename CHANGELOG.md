@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## 0.1.3 — Frei konfigurierbare JB2A-Effekte
+- Aktuelle JB2A-Effektdatenbank von Sequencer im Editor durchsuchen (Free/Patreon).
+- Für jeden D&D-Zauber eigene benannte Varianten mit mehreren Animationen erstellen.
+- Einzelne Animationen auf Ausgangspunkt, Flugweg, Zielpunkt oder Wirkungsfläche legen; Reihenfolge, Größe und Verzögerung festlegen.
+- Varianten in den Welteinstellungen dauerhaft speichern; kopieren, ändern, löschen und abspielen.
+- Bestehende automatische Darstellung bleibt als Standard erhalten.
+- Editor mit scrollbar angeordneten Effektzeilen.
+
+
+
 ## 0.1.2 — Anzeige der Zauberliste
 - Zeilenhöhe der Zaubereinträge korrigiert (Foundry-V14-Button-Stile übersteuert).
 - Symbole auf 44 × 44 Pixel begrenzt und linksbündig angeordnet.

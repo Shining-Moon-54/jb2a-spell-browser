@@ -5,6 +5,7 @@ Eine durchsuchbare, makrofreie Zauberbibliothek für **D&D 5E (2014)** und **D&D
 - Zauber aus lokal installierten Kompendien (keine D&D-Bücher mitgeliefert)
 - Grad- und Regelfassungsfilter sowie originale Zaubersymbole
 - Freie Platzierung von Projektilen, Explosionen und dauerhaften Flächen
+- **Eigene Animationen:** Beliebige installierte JB2A-Effekte nach Namen suchen, als mehrteilige Varianten kombinieren, speichern und wiederverwenden. Die Zuordnungen bleiben bei Modulupdates in der Foundry-Welt erhalten.
 - Eigene Verwaltung platzierter, dauerhafter Effekte
 - Keine automatische Schadens-, Heilungs- oder Konzentrationsberechnung
 
