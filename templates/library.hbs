@@ -1,1 +1,83 @@
-<div class="jbs-root"><section class="jbs-left"><h2><i class="fa-solid fa-book-open"></i> D&D-Zauberbibliothek</h2><input class="jbs-search" type="search" data-search placeholder="Zauber suchen..." value="{{search}}"><div class="jbs-filters"><select data-level><option value="all">Alle Grade</option>{{#each levels}}<option value="{{this}}">Grad {{this}}</option>{{/each}}</select><select data-edition><option value="all">Beide Fassungen</option><option value="2014">2014</option><option value="2024">2024</option><option value="?">Unbekannt</option></select></div><div class="jbs-status">{{rows.length}} Zaubervarianten · {{issues}} Lesefehler</div><div class="jbs-list">{{#each rows}}<button type="button" class="jbs-row {{#if selected}}selected{{/if}}" data-select="{{key}}" data-name="{{name}}" data-level="{{level}}" data-edition="{{edition}}"><img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>Grad {{level}} · {{edition}}</small></span></button>{{/each}}</div><button type="button" data-refresh>Kompendien neu einlesen</button></section><section class="jbs-right">{{#if chosen}}<div class="jbs-header"><img src="{{chosen.img}}" alt=""><div><h2>{{chosen.name}}</h2><small>Grad {{chosen.level}} · {{chosen.edition}}</small></div></div><p>{{chosen.effectLabel}}</p>{{#if chosen.fallback}}<p class="jbs-warn">Allgemeine Ersatzanimation – kann vom Zauber abweichen.</p>{{/if}}{{#if chosen.wall}}<label>Form <select data-variant><option value="line">Gerade Feuerwand</option><option value="ring">Feuerring</option></select></label>{{/if}}<label><input type="checkbox" data-persist {{#if chosen.persistent}}checked{{/if}}> Effekt dauerhaft auf der Karte lassen</label><button type="button" data-play>Auf Karte ausführen</button>{{else}}<p>Wähle links einen Zauber aus.</p>{{/if}}<hr><h3>Aktive Effekte ({{effects.length}})</h3><div class="jbs-effects">{{#each effects}}<div class="jbs-effect"><span>{{name}}</span><button type="button" data-remove="{{id}}">Entfernen</button></div>{{else}}<p>Keine dauerhaften Effekte dieser Bibliothek in der Szene.</p>{{/each}}</div><button type="button" data-manager>Sequencer-Effektverwaltung öffnen</button><p class="jbs-status jbs-push">Nur Visualisierung; keine automatische Regelauswertung.</p></section></div>
+<div class="jbs-root">
+<section class="jbs-left">
+ <h2><i class="fa-solid fa-book-open"></i> D&D-Zauberbibliothek</h2>
+ <input class="jbs-search" type="search" data-search placeholder="Zauber suchen..." value="{{search}}">
+ <div class="jbs-filters">
+  <select data-level><option value="all">Alle Grade</option>{{#each levels}}<option value="{{this}}">Grad {{this}}</option>{{/each}}</select>
+  <select data-edition><option value="all">Beide Fassungen</option><option value="2014">2014</option><option value="2024">2024</option><option value="?">Unbekannt</option></select>
+ </div>
+ <div class="jbs-status">{{rows.length}} Zaubervarianten · {{issues}} Lesefehler</div>
+ <div class="jbs-list">
+  {{#each rows}}
+   <button type="button" class="jbs-row {{#if selected}}selected{{/if}}" data-select="{{key}}" data-name="{{name}}" data-level="{{level}}" data-edition="{{edition}}">
+    <img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>Grad {{level}} · {{edition}}</small></span>
+   </button>
+  {{/each}}
+ </div>
+ <button type="button" data-refresh>Kompendien neu einlesen</button>
+</section>
+<section class="jbs-right">
+ {{#if chosen}}
+  <div class="jbs-header"><img src="{{chosen.img}}" alt=""><div><h2>{{chosen.name}}</h2><small>Grad {{chosen.level}} · {{chosen.edition}}</small></div></div>
+  <label class="jbs-label">Animation wählen
+   <select data-variant-select>{{#each chosen.variants}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select>
+  </label>
+  <div class="jbs-variant-actions">
+   <button type="button" data-new-variant><i class="fa-solid fa-plus"></i> Leer anlegen</button>
+   <button type="button" data-copy-variant><i class="fa-solid fa-copy"></i> Kopieren</button>
+  </div>
+  <p class="jbs-status">{{chosen.effectLabel}}</p>
+  {{#if chosen.fallback}}<p class="jbs-warn">Basisvisualisierung; eigenen Effekt aus deiner JB2A-Bibliothek wählen.</p>{{/if}}
+  {{#if chosen.custom}}
+   <div class="jbs-editor">
+    <label class="jbs-label">Name der Variante <input data-variant-name maxlength="80" type="text" value="{{chosen.editor.name}}"></label>
+    <label class="jbs-label">Platzierung
+     <select data-mode>{{#each chosen.modeOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+    </label>
+    <label class="jbs-label">Radius (Fuß) <input data-radius type="number" min="1" max="500" step="1" value="{{chosen.editor.radius}}"></label>
+    <h3>Zugeordnete Effekte ({{chosen.effects.length}})</h3>
+    <div class="jbs-layer-list">
+     {{#each chosen.effects}}
+      <div class="jbs-layer" data-layer="{{index}}">
+       <div class="jbs-layer-title"><span>{{path}}</span>
+        <div class="jbs-layer-buttons">
+         <button type="button" data-layer-up="{{index}}" title="Nach oben">↑</button>
+         <button type="button" data-layer-down="{{index}}" title="Nach unten">↓</button>
+         <button type="button" data-layer-remove="{{index}}" title="Entfernen">×</button>
+        </div>
+       </div>
+       <div class="jbs-layer-fields">
+        <label>Position<select data-role>{{#each roles}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+        <label>Verzögerung (ms)<input data-delay type="number" min="0" max="30000" step="100" value="{{delay}}"></label>
+        <label>Größe ×<input data-scale type="number" min="0.1" max="10" step="0.1" value="{{scale}}"></label>
+       </div>
+       <label class="jbs-check"><input data-clip type="checkbox" {{#if clip}}checked{{/if}}> An Wänden abschneiden</label>
+      </div>
+     {{else}}
+      <p class="jbs-status">Noch keine Animationen zugeordnet. Suche unten in deiner JB2A-Bibliothek.</p>
+     {{/each}}
+    </div>
+    <h3>Installierte JB2A-Effekte ({{assetCount}})</h3>
+    <input type="search" data-asset-search placeholder="z. B. fireball, impact, wall_of_fire">
+    <div class="jbs-asset-results" data-asset-results></div>
+    <div class="jbs-variant-actions">
+     <button type="button" data-save-variant><i class="fa-solid fa-floppy-disk"></i> Variante speichern</button>
+     <button type="button" data-delete-variant><i class="fa-solid fa-trash"></i> Variante löschen</button>
+    </div>
+   </div>
+  {{else}}
+   {{#if chosen.wall}}<label class="jbs-label">Form<select data-variant><option value="line">Gerade Feuerwand</option><option value="ring">Feuerring</option></select></label>{{/if}}
+   <p class="jbs-status">Erstelle eine eigene Variante, um beliebige installierte JB2A-Animationen zu kombinieren.</p>
+  {{/if}}
+  <label class="jbs-check"><input type="checkbox" data-persist {{#if chosen.persistent}}checked{{/if}}> Animation dauerhaft platzieren</label>
+  <button class="jbs-play" type="button" data-play>Auf Karte ausführen</button>
+ {{else}}
+  <p>Wähle links einen Zauber aus.</p>
+ {{/if}}
+ <hr>
+ <h3>Aktive Effekte ({{effects.length}})</h3>
+ <div class="jbs-effects">{{#each effects}}<div class="jbs-effect"><span>{{name}}</span><button type="button" data-remove="{{id}}">Entfernen</button></div>{{else}}<p>Keine dauerhaften Effekte dieser Bibliothek in der Szene.</p>{{/each}}</div>
+ <button type="button" data-manager>Sequencer-Effektverwaltung öffnen</button>
+ <p class="jbs-status">Nur Visualisierung; keine automatische Regelauswertung.</p>
+</section>
+</div>
