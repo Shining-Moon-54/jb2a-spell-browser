@@ -1,3 +1,4 @@
+import {storedVariants,writeVariants,availableEffects,effectRow,makeDefaultVariant,validateVariant,runVariant} from "./variants.js";
 
 const ID="jb2a-spell-browser",PREFIX="jbs_vfx_";
 const slug=s=>String(s||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
@@ -124,32 +125,238 @@ async function play(spell,permanent,variant){
   await seq.play();ui.notifications.info(spell.name+(permanent?" dauerhaft platziert":" abgespielt"));
  }catch(e){console.error(ID,spell.name,e);ui.notifications.error(spell.name+": "+(e.message||String(e)))}
 }
+
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
-class Browser extends HandlebarsApplicationMixin(ApplicationV2){
- static DEFAULT_OPTIONS={id:"jb2a-spell-browser-window",classes:["jb2a-spell-browser"],window:{title:"D&D-Zauberbibliothek · JB2A",resizable:true},position:{width:900,height:650}};
+class Browser extends HandlebarsApplicationMixin(ApplicationV2) {
+ static DEFAULT_OPTIONS={
+   id:"jb2a-spell-browser-window",
+   classes:["jb2a-spell-browser"],
+   window:{title:"D&D-Zauberbibliothek · JB2A",resizable:true},
+   position:{width:1120,height:750}
+ };
  static PARTS={main:{template:"modules/"+ID+"/templates/library.hbs"}};
- constructor(...args){super(...args);this.rows=[];this.issues=0;this.selected=null;this.search="";this.level="all";this.edition="all"}
- static async open(){let app=foundry.applications.instances.get("jb2a-spell-browser-window");if(!app){app=new Browser();await app.reload()}await app.render(true);app.bringToFront();return app}
- async reload(){const res=await scan();this.rows=res.rows;this.issues=res.issues;await this.render(true)}
+ constructor(...args){
+   super(...args);
+   this.rows=[];this.issues=0;this.selected=null;
+   this.search="";this.level="all";this.edition="all";
+   this.variantId="default";this.draft=null;
+   this.assetQuery="";
+ }
+ static async open(){
+   let app=foundry.applications.instances.get("jb2a-spell-browser-window");
+   if(!app){app=new Browser();await app.reload()}
+   await app.render(true);app.bringToFront();return app;
+ }
+ async reload(){
+   const res=await scan();
+   this.rows=res.rows;this.issues=res.issues;
+   await this.render(true);
+ }
+ getSpell(){return this.rows.find(s=>s.key===this.selected)}
+ getSaved(){const s=this.getSpell();return s?storedVariants(s.key):[]}
  async _prepareContext(o){
-  const ctx=await super._prepareContext(o);
-  const rows=this.rows.map(s=>({...s,selected:s.key===this.selected}));
-  const chosen=rows.find(s=>s.key===this.selected);
-  if(chosen){const effect=mapping(chosen);Object.assign(chosen,{effectLabel:effect.label,fallback:effect.fallback,persistent:!!effect.persistent,wall:effect.mode==="wall"})}
-  return {...ctx,rows,chosen,issues:this.issues,search:this.search,levels:[0,1,2,3,4,5,6,7,8,9],effects:active().map(e=>({id:e.data?.name||e.name,name:(e.data?.name||e.name||"").replace(PREFIX,"").split("__")[0]}))};
+   const ctx=await super._prepareContext(o);
+   const rows=this.rows.map(s=>({...s,selected:s.key===this.selected}));
+   const chosen=rows.find(s=>s.key===this.selected);
+   let variants=[],effects=[],editor=null,modeOptions=[];
+   if(chosen){
+     const cfg=mapping(chosen);
+     variants=[{id:"default",name:"Standard (automatisch)",selected:this.variantId==="default"}];
+     const saved=storedVariants(chosen.key);
+     for(const v of saved) variants.push({...v,selected:v.id===this.variantId});
+     if(this.variantId!=="default"){
+       if(!this.draft || this.draft.id!==this.variantId){
+         const found=saved.find(v=>v.id===this.variantId);
+         this.draft=found?structuredClone(found):null;
+       }
+       if(!this.draft){this.variantId="default"}
+       else if(!variants.some(v=>v.id===this.variantId))
+         variants.push({id:this.variantId,name:this.draft.name+" (ungespeichert)",selected:true});
+     }
+     const custom=this.variantId!=="default"&&!!this.draft;
+     editor=custom?this.draft:null;
+     const roles=[
+       {value:"origin",label:"Ausgangspunkt"},
+       {value:"travel",label:"Flugweg / Wand"},
+       {value:"target",label:"Zielpunkt"},
+       {value:"area",label:"Wirkungsfläche"}
+     ];
+     effects=custom?this.draft.effects.map((fx,index)=>({
+       ...fx,index,roles:roles.map(r=>({...r,selected:r.value===fx.role}))
+     })):[];
+     modeOptions=[
+       {value:"point",label:"Nur Zielpunkt"},
+       {value:"projectile",label:"Start- und Zielpunkt"},
+       {value:"area",label:"Fläche (Mittelpunkt)"},
+       {value:"wall",label:"Wand (Anfang / Ende)"},
+       {value:"teleport",label:"Teleport (zwei Punkte)"}
+     ].map(m=>({...m,selected:editor?.mode===m.value}));
+     Object.assign(chosen,{
+       effectLabel:custom?"Eigene Effektkombination":cfg.label,
+       fallback:!custom&&cfg.fallback,
+       persistent:custom?!!editor.persistent:!!cfg.persistent,
+       wall:!custom&&cfg.mode==="wall",
+       custom, variants, editor, modeOptions, effects
+     });
+   }
+   let activeEffects=[];
+   if(canvas.ready){
+     activeEffects=active().map(e=>({
+       id:e.data?.name||e.name,
+       name:(e.data?.name||e.name||"").replace(PREFIX,"").split("__")[0]
+     })).filter(e=>e.id);
+   }
+   return {...ctx,rows,chosen,issues:this.issues,search:this.search,
+     levels:[0,1,2,3,4,5,6,7,8,9],effects:activeEffects,
+     assetCount:availableEffects().length};
+ }
+ _readDraft(root){
+   if(!this.draft)return;
+   const find=s=>root.querySelector(s);
+   this.draft.name=find("[data-variant-name]")?.value??this.draft.name;
+   this.draft.mode=find("[data-mode]")?.value??this.draft.mode;
+   this.draft.radius=Number(find("[data-radius]")?.value??this.draft.radius);
+   this.draft.persistent=!!find("[data-persist]")?.checked;
+   for(const el of root.querySelectorAll("[data-layer]")){
+     const n=Number(el.dataset.layer),item=this.draft.effects[n];
+     if(!item)continue;
+     item.role=el.querySelector("[data-role]")?.value??item.role;
+     item.delay=Number(el.querySelector("[data-delay]")?.value??item.delay);
+     item.scale=Number(el.querySelector("[data-scale]")?.value??item.scale);
+     item.clip=!!el.querySelector("[data-clip]")?.checked;
+   }
+ }
+ async _updateFrom(event, fn){
+   try{await fn();await this.render(true)}
+   catch(e){console.error(ID,"Editor:",e);ui.notifications.error(e?.message||String(e))}
+ }
+ _renderAssets(root){
+   const pane=root.querySelector("[data-asset-results]");
+   const search=root.querySelector("[data-asset-search]");
+   if(!pane||!search)return;
+   const paths=availableEffects(),query=this.assetQuery.trim().toLowerCase();
+   search.value=this.assetQuery;
+   const matches=paths.filter(path=>path.toLowerCase().includes(query));
+   // DOM-Nodes, keine HTML-Injektion durch Assetnamen
+   pane.replaceChildren();
+   const summary=document.createElement("p");
+   summary.className="jbs-status";
+   summary.textContent=matches.length+" Treffer – bis zu 60 angezeigt";
+   pane.append(summary);
+   for(const path of matches.slice(0,60)){
+     const btn=document.createElement("button");
+     btn.type="button";btn.className="jbs-asset-option";
+     btn.title=path;btn.textContent="＋ "+path;
+     btn.addEventListener("click",()=>this._updateFrom(null,async()=>{
+       this._readDraft(root);
+       if(this.draft.effects.length>=24)throw new Error("Höchstens 24 Effekte pro Variante.");
+       this.draft.effects.push(effectRow(path,"target"));
+     }));
+     pane.append(btn);
+   }
  }
  _onRender(ctx,o){
-  super._onRender(ctx,o);const root=this.element;
-  const filter=()=>{const q=slug(this.search);root.querySelectorAll("[data-select]").forEach(el=>{const show=slug(el.dataset.name).includes(q)&&(this.level==="all"||el.dataset.level===this.level)&&(this.edition==="all"||el.dataset.edition===this.edition);el.hidden=!show})};
-  root.querySelector("[data-search]")?.addEventListener("input",e=>{this.search=e.target.value;filter()});
-  root.querySelector("[data-level]")?.addEventListener("change",e=>{this.level=e.target.value;filter()});
-  root.querySelector("[data-edition]")?.addEventListener("change",e=>{this.edition=e.target.value;filter()});
-  const level=root.querySelector("[data-level]"),edition=root.querySelector("[data-edition]");if(level)level.value=this.level;if(edition)edition.value=this.edition;filter();
-  root.querySelectorAll("[data-select]").forEach(el=>el.addEventListener("click",async()=>{this.selected=el.dataset.select;await this.render(true)}));
-  root.querySelector("[data-refresh]")?.addEventListener("click",()=>this.reload());
-  root.querySelector("[data-play]")?.addEventListener("click",async()=>{const s=this.rows.find(x=>x.key===this.selected);if(!s)return;const keep=!!root.querySelector("[data-persist]")?.checked,variant=root.querySelector("[data-variant]")?.value||"line";try{await this.minimize();await play(s,keep,variant)}finally{if(this.rendered){await this.maximize();await this.render(true)}}});
-  root.querySelector("[data-manager]")?.addEventListener("click",()=>Sequencer.EffectManager.show());
-  root.querySelectorAll("[data-remove]").forEach(el=>el.addEventListener("click",async()=>{await Sequencer.EffectManager.endEffects({name:el.dataset.remove});await this.render(true)}));
+   super._onRender(ctx,o);
+   const root=this.element;
+   const filter=()=>{
+     const query=slug(this.search);
+     root.querySelectorAll("[data-select]").forEach(el=>{
+       el.hidden=!(
+         slug(el.dataset.name).includes(query)&&
+         (this.level==="all"||el.dataset.level===this.level)&&
+         (this.edition==="all"||el.dataset.edition===this.edition)
+       );
+     });
+   };
+   root.querySelector("[data-search]")?.addEventListener("input",e=>{this.search=e.target.value;filter()});
+   root.querySelector("[data-level]")?.addEventListener("change",e=>{this.level=e.target.value;filter()});
+   root.querySelector("[data-edition]")?.addEventListener("change",e=>{this.edition=e.target.value;filter()});
+   const level=root.querySelector("[data-level]"),edition=root.querySelector("[data-edition]");
+   if(level)level.value=this.level;if(edition)edition.value=this.edition;filter();
+   root.querySelectorAll("[data-select]").forEach(el=>el.addEventListener("click",async()=>{
+     if(this.selected!==el.dataset.select){
+       this.selected=el.dataset.select;this.variantId="default";this.draft=null;this.assetQuery="";
+     }
+     await this.render(true);
+   }));
+   root.querySelector("[data-refresh]")?.addEventListener("click",()=>this.reload());
+   root.querySelector("[data-variant-select]")?.addEventListener("change",async e=>{
+     this.variantId=e.target.value;this.draft=null;this.assetQuery="";
+     await this.render(true);
+   });
+   root.querySelector("[data-new-variant]")?.addEventListener("click",()=>this._updateFrom(null,async()=>{
+     const s=this.getSpell();if(!s)return;
+     this.draft={id:foundry.utils.randomID(),name:"Neue Variante",
+       mode:"point",radius:s.size||10,persistent:false,effects:[]};
+     this.variantId=this.draft.id;
+   }));
+   root.querySelector("[data-copy-variant]")?.addEventListener("click",()=>this._updateFrom(null,async()=>{
+     const s=this.getSpell();if(!s)return;
+     if(this.draft)this._readDraft(root);
+     const next=this.draft?structuredClone(this.draft):makeDefaultVariant(s,mapping(s));
+     next.id=foundry.utils.randomID();
+     next.name=this.draft?this.draft.name+" (Kopie)":"Standard (Kopie)";
+     this.draft=next;this.variantId=next.id;
+   }));
+   root.querySelector("[data-asset-search]")?.addEventListener("input",e=>{
+     this.assetQuery=e.target.value;this._renderAssets(root);
+   });
+   this._renderAssets(root);
+   root.querySelectorAll("[data-layer-up],[data-layer-down],[data-layer-remove]").forEach(btn=>
+     btn.addEventListener("click",()=>this._updateFrom(null,async()=>{
+       this._readDraft(root);
+       const i=Number(btn.dataset.layerUp??btn.dataset.layerDown??btn.dataset.layerRemove);
+       if(btn.hasAttribute("data-layer-remove"))this.draft.effects.splice(i,1);
+       else{
+         const j=i+(btn.hasAttribute("data-layer-up")?-1:1);
+         if(j>=0&&j<this.draft.effects.length){
+           [this.draft.effects[i],this.draft.effects[j]]=[this.draft.effects[j],this.draft.effects[i]];
+         }
+       }
+     }))
+   );
+   root.querySelector("[data-save-variant]")?.addEventListener("click",()=>this._updateFrom(null,async()=>{
+     const s=this.getSpell();if(!s||!this.draft)return;
+     this._readDraft(root);
+     const clean=validateVariant(structuredClone(this.draft));
+     const saved=storedVariants(s.key),index=saved.findIndex(v=>v.id===clean.id);
+     if(index>=0)saved[index]=clean;else saved.push(clean);
+     await writeVariants(s.key,saved);
+     this.draft=structuredClone(clean);
+     ui.notifications.info("Variante „"+clean.name+"“ gespeichert.");
+   }));
+   root.querySelector("[data-delete-variant]")?.addEventListener("click",()=>this._updateFrom(null,async()=>{
+     const s=this.getSpell();if(!s||!this.draft)return;
+     const choice=await foundry.applications.api.DialogV2.confirm({
+       window:{title:"Variante löschen"},
+       content:"Diese gespeicherte Variante wirklich löschen?",
+       yes:{label:"Löschen"},no:{label:"Abbrechen"}
+     });
+     if(!choice)return;
+     await writeVariants(s.key,storedVariants(s.key).filter(v=>v.id!==this.variantId));
+     this.variantId="default";this.draft=null;
+   }));
+   root.querySelector("[data-play]")?.addEventListener("click",async()=>{
+     const s=this.getSpell();if(!s)return;
+     const keep=!!root.querySelector("[data-persist]")?.checked;
+     const variant=root.querySelector("[data-variant]")?.value||"line";
+     try{
+       if(this.draft){
+         this._readDraft(root);
+         await this.minimize();
+         await runVariant(s,this.draft,keep);
+       }else{
+         await this.minimize();
+         await play(s,keep,variant);
+       }
+     }catch(e){console.error(ID,"Abspielen:",e);ui.notifications.error(e?.message||String(e))}
+     finally{if(this.rendered){await this.maximize();await this.render(true)}}
+   });
+   root.querySelector("[data-manager]")?.addEventListener("click",()=>Sequencer.EffectManager.show());
+   root.querySelectorAll("[data-remove]").forEach(el=>el.addEventListener("click",async()=>{
+     await Sequencer.EffectManager.endEffects({name:el.dataset.remove});
+     await this.render(true);
+   }));
  }
 }
 Hooks.on("getSceneControlButtons",controls=>{if(!game.user.isGM)return;const tools=controls.tokens?.tools;if(!tools)return;tools.jb2aSpellBrowser={name:"jb2aSpellBrowser",title:"D&D-Zauberbibliothek",icon:"fa-solid fa-book-open",button:true,visible:true,order:Object.keys(tools).length,onChange:()=>void Browser.open()}});
