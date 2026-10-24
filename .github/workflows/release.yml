@@ -1,0 +1,37 @@
+name: Foundry-Modul veröffentlichen
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Manifest prüfen
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('module.json').read_text())
+          assert m['id']=='jb2a-spell-browser'
+          assert m['download'].endswith('/releases/download/v'+m['version']+'/jb2a-spell-browser.zip')
+          for p in ('scripts/main.js','templates/library.hbs','styles/library.css'):
+              assert Path(p).is_file(), p
+          PY
+      - name: ZIP bauen
+        run: zip -r "$RUNNER_TEMP/jb2a-spell-browser.zip" module.json scripts/ templates/ styles/ README.md README_DE.md CHANGELOG.md
+      - name: GitHub Release erstellen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(python3 -c 'import json;print(json.load(open("module.json"))["version"])')"
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" module.json "$RUNNER_TEMP/jb2a-spell-browser.zip" --clobber
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "JB2A-Zauberbibliothek $VERSION" --notes "Früher Foundry-V14-Prototyp; bitte in Foundry testen." module.json "$RUNNER_TEMP/jb2a-spell-browser.zip"
+          fi
