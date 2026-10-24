@@ -43,21 +43,39 @@ async function scan(){
  const found=new Map();let issues=0;
  const packs=game.packs.filter(p=>p.documentName==="Item"&&(/spell|zauber|grimoire/i.test(p.collection+" "+p.metadata?.label)||(p.metadata?.flags?.dnd5e?.types||[]).includes("spell")));
  const add=(doc,pack="")=>{
-  if(doc.type!=="spell")return;
-  const s=doc.system||{},rules=String(s.source?.rules||"");
-  const edition=rules.includes("2024")||/spells24|players-handbook/.test(pack)?"2024":rules.includes("2014")||/dnd5e\.spells$/.test(pack)?"2014":"?";
+  if(!doc||doc.type!=="spell")return;
+  // D&D5e-Versionen speichern "source" nicht einheitlich.
+  // Bei alten Eintraegen kann "source" sogar eine Zahl sein.
+  const s=doc.system&&typeof doc.system==="object"?doc.system:{};
+  const source=s.source;
+  const rawRules=typeof source==="string"?source:source&&typeof source==="object"?source.rules:"";
+  const rules=String(rawRules||"");
+  const edition=rules.includes("2024")||/spells24|players-handbook/.test(pack)?"2024":rules.includes("2014")||/dnd5e\\.spells$/.test(pack)?"2014":"?";
   const name=doc.name,code=slug(s.identifier||name),key=edition+":"+code;
-  const score=/dnd-players-handbook/.test(pack)?100:/dnd5e\.spells24/.test(pack)?80:pack?40:10;
+  const score=/dnd-players-handbook/.test(pack)?100:/dnd5e\\.spells24/.test(pack)?80:pack?40:10;
   const prior=found.get(key);if(prior&&prior.score>=score)return;
   found.set(key,{key,name,slug:code,edition,level:Math.min(9,Math.max(0,Number(s.level)||0)),img:doc.img||"icons/svg/book.svg",size:number(s.target?.template?.size),template:s.target?.template?.type||"",score});
  };
  for(const p of packs){
   try{
-   const index=await p.getIndex({fields:["type","system.identifier","system.level","system.source.rules","system.target.template.type","system.target.template.size","img"]});
-   for(const d of index)add(d,p.collection);
-  }catch(e){issues++;console.warn(ID,"Kompendium",p.collection,e)}
+   // Wichtig: keine verschachtelten getIndex-Felder anfordern!
+   // Einige 2014/2024-Kompendien enthalten primitive Zwischenwerte,
+   // was in Foundry zu "Cannot use 'in' operator ... rules in 1" fuehrt.
+   const index=await p.getIndex();
+   const ids=[...index].filter(i=>i?.type==="spell").map(i=>i._id).filter(Boolean);
+   for(let i=0;i<ids.length;i+=75){
+    const docs=await p.getDocuments({_id__in:ids.slice(i,i+75)});
+    docs.forEach(d=>add(d,p.collection));
+   }
+   // Manche Kompendien liefern keinen Typ im Index.
+   if(!ids.length){
+    const docs=await p.getDocuments({type:"spell"});
+    docs.forEach(d=>add(d,p.collection));
+   }
+  }catch(e){issues++;console.warn(ID,"Kompendium konnte nicht gelesen werden:",p.collection,e)}
  }
  for(const item of game.items.filter(i=>i.type==="spell"))add(item);
+ console.info(ID,"Zaubervarianten:",found.size,"Kompendium-Fehler:",issues);
  return {rows:[...found.values()].sort((a,b)=>a.level-b.level||a.name.localeCompare(b.name,"de")),issues};
 }
 const active=()=>{try{return Sequencer.EffectManager.getEffects({name:PREFIX+"*",sceneId:canvas.scene.id})||[]}catch(e){console.warn(e);return []}};

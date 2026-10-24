@@ -1,14 +1,14 @@
 # D&D-Zauberbibliothek – JB2A für Foundry V14
 
-Eine durchsuchbare, makrofreie Zauberbibliothek für **D&D 5E (2014)** und **D&D 5.5E (2024)** mit JB2A und Sequencer. **Prototyp 0.1.0 – noch nicht in Foundry live getestet.**
+Eine durchsuchbare, makrofreie Zauberbibliothek für **D&D 5E (2014)** und **D&D 5.5E (2024)** mit JB2A und Sequencer. **Prototyp 0.1.1 – noch nicht in Foundry live getestet.**
 
 - Zauber aus lokal installierten Kompendien (keine D&D-Bücher mitgeliefert)
-- Grad- und Regelfassungsfilter, Favoriten, originale Zaubersymbole
+- Grad- und Regelfassungsfilter sowie originale Zaubersymbole
 - Freie Platzierung von Projektilen, Explosionen und dauerhaften Flächen
 - Eigene Verwaltung platzierter, dauerhafter Effekte
 - Keine automatische Schadens-, Heilungs- oder Konzentrationsberechnung
 
-## Foundry-Installation (sobald Release veröffentlicht)
+## Foundry-Installation
 
 Im Foundry-Setup unter **Zusatzmodule → Modul installieren → Manifest-URL** einfügen:
 
